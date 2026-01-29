@@ -7,7 +7,6 @@
   <style>
 .orb { position: fixed; top: 0; left: 0; z-index: -1; border-radius: 50%; background: radial-gradient(circle, rgba(0,255,0,0.28), transparent 70%); box-shadow: 0 0 25px rgba(0,255,0,0.25); opacity: 0; pointer-events: none; mix-blend-mode: screen; will-change: transform, opacity; }
 body * { position: relative; z-index: 1; }
-
   input[type="text"] {
     color: rgb(12, 141, 173);
     background-color: rgb(15,15,15);
@@ -28,7 +27,6 @@ body * { position: relative; z-index: 1; }
   }
   .note { color: rgb(52,112,240); font-size: 0.9em; margin-top: 20px; }
   .versions-list { font-family: monospace; white-space: pre; background:rgb(15,15,15); padding:20px; border-radius:4px; }
-
   body {
     background-color: rgb(49, 48, 48);
     color: rgb(52, 112, 240);
@@ -38,46 +36,36 @@ body * { position: relative; z-index: 1; }
     color: rgb(12, 141, 173);
   }
 </style>
-
 </head>
 <body>
   <h1>Account Password Generator🔐</h1>
-
   <label>
     Key:
     <input id="masterKey" type="text" autocomplete="off" size="50" />
   </label>
-
   <label>
     Acc Name:
     <input id="accountName" type="text" autocomplete="off" size="50" />
   </label>
-
   <label>
     Version:
     <select id="versionSelect"></select>
   </label>
-
   <div>
     <button id="generateBtn">Generate password</button>
   </div>
-
   <br />
-
   <label>
     Generated password:
     <input id="passwordOutput" type="text" readonly />
   </label>
-
   <div>
     <button id="copyBtn">Copy password</button>
   </div>
-
   <div class="note">
     <strong>Available versions</strong> (parameters for each version are stored in the code):
     <div id="versionsList" class="versions-list" aria-live="polite"></div>
   </div>
-
   <script>
     // -------------------------
     // Minimal deterministic password generator
@@ -86,9 +74,7 @@ body * { position: relative; z-index: 1; }
     // - Map bytes to a password using a charset
     // - Versioning included so you can change parameters later without breaking old passwords
     // -------------------------
-
     const encoder = new TextEncoder();
-
     // ====== VERSIONS MAP ======
     // Add new versions here. Keep old versions unchanged so old passwords remain reproducible.
     // Each version entry should include:
@@ -103,7 +89,6 @@ body * { position: relative; z-index: 1; }
     // To add a new version:
     // 1) copy an existing entry, change parameters, give it a new key like "v2"
     // 2) update DEFAULT_VERSION below if you want new generation to use the new version by default
-
     const VERSIONS = {
       "v1": {
         kdf: "PBKDF2",
@@ -124,17 +109,13 @@ body * { position: relative; z-index: 1; }
       //   length: 24
       // }
     };
-
     // Default encryption version
     const DEFAULT_VERSION = "v1";
-
     const versionSelect = document.getElementById("versionSelect");
     const versionsListEl = document.getElementById("versionsList");
-
     function refreshVersionUI() {
       versionSelect.innerHTML = "";
       const lines = [];
-
       Object.keys(VERSIONS).forEach(v => {
         const opt = document.createElement("option");
         opt.value = v;
@@ -146,7 +127,6 @@ body * { position: relative; z-index: 1; }
           `${v}: kdf=${p.kdf}; masterSalt="${p.masterSalt}"; masterIter=${p.masterIter}; accountIter=${p.accountIter}; hash=${p.hash}; len=${p.length}`
         );
       });
-
       versionSelect.value =
         DEFAULT_VERSION in VERSIONS
           ? DEFAULT_VERSION
@@ -154,9 +134,7 @@ body * { position: relative; z-index: 1; }
 
       versionsListEl.textContent = lines.join("\n");
     }
-
     refreshVersionUI();
-
     async function deriveBitsPBKDF2(passwordBytes, saltBytes, iterations, bitLength, hash) {
       const baseKey = await crypto.subtle.importKey(
         "raw",
@@ -165,7 +143,6 @@ body * { position: relative; z-index: 1; }
         false,
         ["deriveBits"]
       );
-
       const bits = await crypto.subtle.deriveBits(
         {
           name: "PBKDF2",
@@ -176,14 +153,11 @@ body * { position: relative; z-index: 1; }
         baseKey,
         bitLength
       );
-
       return new Uint8Array(bits);
     }
-
     function bytesToPassword(bytes, charset, length) {
       const chars = [];
       const charsetLength = charset.length;
-
       for (let i = 0; i < length; i++) {
         const b1 = bytes[(i * 2) % bytes.length];
         const b2 = bytes[(i * 2 + 1) % bytes.length];
@@ -191,18 +165,14 @@ body * { position: relative; z-index: 1; }
         const index = combined % charsetLength;
         chars.push(charset[index]);
       }
-
       return chars.join("");
     }
-
     async function generatePassword(Key, accountName, version) {
       if (!Key || !accountName || !version) {
         throw new Error("Key, account name, and version are required.");
       }
-
       const params = VERSIONS[version];
       if (!params) throw new Error("Unknown version: " + version);
-
       const masterSaltBytes = encoder.encode(params.masterSalt + "|" + version);
       const masterKeyBytes = await deriveBitsPBKDF2(
         encoder.encode(Key),
@@ -211,7 +181,6 @@ body * { position: relative; z-index: 1; }
         256,
         params.hash
       );
-
       const accountSaltBytes = encoder.encode(version + "|" + accountName);
       const accountBits = await deriveBitsPBKDF2(
         masterKeyBytes,
@@ -220,19 +189,14 @@ body * { position: relative; z-index: 1; }
         256,
         params.hash
       );
-
       return bytesToPassword(accountBits, params.charset, params.length);
     }
-
-    // Wire up UI
     document.getElementById("generateBtn").addEventListener("click", async () => {
       const Key = document.getElementById("masterKey").value.trim();
       const accountName = document.getElementById("accountName").value.trim();
       const version = document.getElementById("versionSelect").value;
       const output = document.getElementById("passwordOutput");
-
       output.value = "";
-
       try {
         const pwd = await generatePassword(Key, accountName, version);
         output.value = pwd;
@@ -241,12 +205,10 @@ body * { position: relative; z-index: 1; }
         alert("Error: " + err.message);
       }
     });
-
     // Copy button
     document.getElementById("copyBtn").addEventListener("click", async () => {
       const out = document.getElementById("passwordOutput");
       if (!out.value) return;
-
       try {
         if (navigator.clipboard && navigator.clipboard.writeText) {
           await navigator.clipboard.writeText(out.value);
@@ -254,7 +216,6 @@ body * { position: relative; z-index: 1; }
           out.select();
           document.execCommand("copy");
         }
-
         const btn = document.getElementById("copyBtn");
         const old = btn.textContent;
         btn.textContent = "Copied!";
@@ -264,7 +225,6 @@ body * { position: relative; z-index: 1; }
         alert("Copy failed");
       }
     });
-
     // Allow changing default version at runtime
     window.setDefaultVersion = function (v) {
       if (v in VERSIONS) {
@@ -273,49 +233,37 @@ body * { position: relative; z-index: 1; }
         console.warn("Unknown version:", v);
       }
     };
-
   </script>
-
-  <!-- NEW: floating orb background script -->
   <script>
     const MAX_ORBS = 30;
-
     function createOrb() {
       const orb = document.createElement("div");
       orb.className = "orb";
-
       const size = Math.random() * 30 + 10;
       orb.style.width = size + "px";
       orb.style.height = size + "px";
-
       const startX = Math.random() * window.innerWidth;
       const startY = Math.random() * window.innerHeight;
-
       orb.style.left = startX + "px";
       orb.style.top = startY + "px";
-
       const duration = Math.random() * 10 + 8;
       orb.style.animationDuration = duration + "s";
       orb.style.animationDelay = Math.random() * 5 + "s";
-
       document.body.appendChild(orb);
-
       setTimeout(() => {
         orb.remove();
       }, duration * 1000);
     }
-
     function maintainOrbs() {
       const currentOrbs = document.querySelectorAll(".orb").length;
       if (currentOrbs < MAX_ORBS) {
         createOrb();
       }
     }
-
     for (let i = 0; i < MAX_ORBS; i++) {
       createOrb();
     }
-
     setInterval(maintainOrbs, 1500);
   </script>
+
 
