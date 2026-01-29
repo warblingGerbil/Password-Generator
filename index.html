@@ -5,7 +5,35 @@
   <title>Account Password Generator</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-.orb { position: fixed; top: 0; left: 0; z-index: -1; border-radius: 50%; background: radial-gradient(circle, rgba(0,255,0,0.28), transparent 70%); box-shadow: 0 0 25px rgba(0,255,0,0.25); opacity: 0; pointer-events: none; mix-blend-mode: screen; will-change: transform, opacity; }
+.orb {
+  position: fixed;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,255,0,0.28), transparent 70%);
+  box-shadow: 0 0 25px rgba(0,255,0,0.25);
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0;
+  z-index: 0;
+  animation: orbFloat linear forwards;
+}
+
+@keyframes orbFloat {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy));
+  }
+}
+
 body * { position: relative; z-index: 1; }
   input[type="text"] {
     color: rgb(12, 141, 173);
@@ -222,36 +250,83 @@ body * { position: relative; z-index: 1; }
     };
   </script>
   <script>
-    const MAX_ORBS = 30;
-    function createOrb() {
-      const orb = document.createElement("div");
-      orb.className = "orb";
-      const size = Math.random() * 30 + 10;
-      orb.style.width = size + "px";
-      orb.style.height = size + "px";
-      const startX = Math.random() * window.innerWidth;
-      const startY = Math.random() * window.innerHeight;
-      orb.style.left = startX + "px";
-      orb.style.top = startY + "px";
-      const duration = Math.random() * 10 + 8;
-      orb.style.animationDuration = duration + "s";
-      orb.style.animationDelay = Math.random() * 5 + "s";
-      document.body.appendChild(orb);
-      setTimeout(() => {
-        orb.remove();
-      }, duration * 1000);
-    }
-    function maintainOrbs() {
-      const currentOrbs = document.querySelectorAll(".orb").length;
-      if (currentOrbs < MAX_ORBS) {
-        createOrb();
-      }
-    }
-    for (let i = 0; i < MAX_ORBS; i++) {
-      createOrb();
-    }
-    setInterval(maintainOrbs, 1500);
-  </script>
+const MAX_ORBS = 30;
 
+function randomEdgePosition() {
+  const edge = Math.floor(Math.random() * 4); // 0=top,1=right,2=bottom,3=left
+  let x, y;
 
+  switch (edge) {
+    case 0: // top
+      x = Math.random() * window.innerWidth;
+      y = -20;
+      break;
+    case 1: // right
+      x = window.innerWidth + 20;
+      y = Math.random() * window.innerHeight;
+      break;
+    case 2: // bottom
+      x = Math.random() * window.innerWidth;
+      y = window.innerHeight + 20;
+      break;
+    case 3: // left
+      x = -20;
+      y = Math.random() * window.innerHeight;
+      break;
+  }
 
+  return { x, y };
+}
+
+function randomDrift() {
+  // Random drift distance in px
+  const dx = (Math.random() * 600 - 300).toFixed(1); // -300 to +300
+  const dy = (Math.random() * 600 - 300).toFixed(1);
+  return { dx, dy };
+}
+
+function createOrb() {
+  const orb = document.createElement("div");
+  orb.className = "orb";
+
+  const size = Math.random() * 30 + 10;
+  orb.style.width = size + "px";
+  orb.style.height = size + "px";
+
+  const { x, y } = randomEdgePosition();
+  orb.style.left = x + "px";
+  orb.style.top = y + "px";
+
+  const duration = Math.random() * 10 + 10; // 10–20s
+  orb.style.animationDuration = duration + "s";
+
+  // Random drift vector
+  const { dx, dy } = randomDrift();
+  orb.style.setProperty("--dx", dx + "px");
+  orb.style.setProperty("--dy", dy + "px");
+
+  // Mid-flight direction change
+  setTimeout(() => {
+    const { dx: newDx, dy: newDy } = randomDrift();
+    orb.style.setProperty("--dx", newDx + "px");
+    orb.style.setProperty("--dy", newDy + "px");
+  }, (duration * 500)); // halfway through
+
+  document.body.appendChild(orb);
+
+  setTimeout(() => orb.remove(), duration * 1000);
+}
+
+function maintainOrbs() {
+  const current = document.querySelectorAll(".orb").length;
+  if (current < MAX_ORBS) createOrb();
+}
+
+// Initial fill
+for (let i = 0; i < MAX_ORBS; i++) createOrb();
+
+// Maintain population
+setInterval(maintainOrbs, 1500);
+</script>
+</body>
+</html>
