@@ -275,10 +275,8 @@ body * { position: relative; z-index: 1; }
       }
     };
 
-  </script>
 <script>
   const MAX_ORBS = 28;
-
   const orbs = [];
   let lastTime = null;
 
@@ -286,22 +284,44 @@ body * { position: relative; z-index: 1; }
     const el = document.createElement("div");
     el.className = "orb";
 
+    // Size
     const baseSize = 18 + Math.random() * 32; // 18–50px
     el.style.width = baseSize + "px";
     el.style.height = baseSize + "px";
 
-    const x = Math.random() * window.innerWidth;
-    const y = Math.random() * window.innerHeight;
+    // Spawn from a random edge
+    const edge = Math.floor(Math.random() * 4);
+    let x, y;
 
-    // Initial direction & speed (px/ms)
+    if (edge === 0) {          // top
+      x = Math.random() * window.innerWidth;
+      y = -40;
+    } else if (edge === 1) {   // bottom
+      x = Math.random() * window.innerWidth;
+      y = window.innerHeight + 40;
+    } else if (edge === 2) {   // left
+      x = -40;
+      y = Math.random() * window.innerHeight;
+    } else {                   // right
+      x = window.innerWidth + 40;
+      y = Math.random() * window.innerHeight;
+    }
+
+    // Movement
+    const targetSpeed = 0.02 + Math.random() * 0.05; // final drift speed
+    const initialSpeed = targetSpeed * 0.3;          // start slow
+
     const angle = Math.random() * Math.PI * 2;
-    const speed = 0.02 + Math.random() * 0.05; // higher min, modest max
-    const vx = Math.cos(angle) * speed;
-    const vy = Math.sin(angle) * speed;
+    let vx = Math.cos(angle) * initialSpeed;
+    let vy = Math.sin(angle) * initialSpeed;
 
+    // Lifespan
     const maxLife = 10000 + Math.random() * 50000; // 10–60s
-    const fadeOutStart = 0.5 + Math.random() * 0.3; // start fading at 50–80% of life
-    const directionTimer = 1000 + Math.random() * 3000; // 1–4s before first turn
+    const fadeOutStart = 0.5 + Math.random() * 0.3; // fade at 50–80%
+
+    // Random direction change timer
+    let directionTimer = 1000 + Math.random() * 3000;
+
     const pulseOffset = Math.random() * Math.PI * 2;
 
     const orb = {
@@ -315,6 +335,7 @@ body * { position: relative; z-index: 1; }
       maxLife,
       fadeOutStart,
       directionTimer,
+      targetSpeed,
       pulseOffset
     };
 
@@ -332,90 +353,97 @@ body * { position: relative; z-index: 1; }
       o.life += dt;
       o.directionTimer -= dt;
 
-      // Random direction changes for curving / wandering paths
+      // Occasional major direction changes
       if (o.directionTimer <= 0) {
         const angle = Math.random() * Math.PI * 2;
-        const speed = 0.02 + Math.random() * 0.05;
-        const turnBlend = 0.6; // blend old & new direction for smoother curves
+        const newVx = Math.cos(angle) * o.targetSpeed;
+        const newVy = Math.sin(angle) * o.targetSpeed;
 
-        const newVx = Math.cos(angle) * speed;
-        const newVy = Math.sin(angle) * speed;
+        // Blend for smooth curves
+        const blend = 0.6;
+        o.vx = o.vx * (1 - blend) + newVx * blend;
+        o.vy = o.vy * (1 - blend) + newVy * blend;
 
-        o.vx = o.vx * (1 - turnBlend) + newVx * turnBlend;
-        o.vy = o.vy * (1 - turnBlend) + newVy * turnBlend;
-
-        o.directionTimer = 1000 + Math.random() * 4000; // 1–5s until next turn
+        o.directionTimer = 1000 + Math.random() * 4000;
       }
 
-      // Position update
+      // Continuous micro‑drift noise
+      o.vx += (Math.random() - 0.5) * 0.0005 * dt;
+      o.vy += (Math.random() - 0.5) * 0.0005 * dt;
+
+      // Smooth acceleration toward target speed
+      const speed = Math.sqrt(o.vx * o.vx + o.vy * o.vy);
+      if (speed > 0) {
+        const accel = 0.00005 * dt;
+        const desired = o.targetSpeed;
+        o.vx += ((o.vx / speed) * desired - o.vx) * accel;
+        o.vy += ((o.vy / speed) * desired - o.vy) * accel;
+      }
+
+      // Update position
       o.x += o.vx * dt;
       o.y += o.vy * dt;
 
-      // Kill if too far off-screen or life exceeded
-      const offscreenMargin = 180;
-      const tooFar =
-        o.x < -offscreenMargin ||
-        o.x > w + offscreenMargin ||
-        o.y < -offscreenMargin ||
-        o.y > h + offscreenMargin;
+      // Remove if too far off-screen or expired
+      const margin = 200;
+      const offscreen =
+        o.x < -margin ||
+        o.x > w + margin ||
+        o.y < -margin ||
+        o.y > h + margin;
 
-      if (tooFar || o.life > o.maxLife) {
+      if (offscreen || o.life > o.maxLife) {
         o.el.remove();
         orbs.splice(i, 1);
         continue;
       }
 
-      // Lifespan-based opacity (fade in, then fade out)
+      // Fade in / fade out
       const lifeRatio = o.life / o.maxLife;
-      let opacity = Math.min(1, lifeRatio * 2); // fade in over first ~50%
+      let opacity = Math.min(1, lifeRatio * 2); // fade in
 
       if (lifeRatio > o.fadeOutStart) {
         const t = (lifeRatio - o.fadeOutStart) / (1 - o.fadeOutStart);
-        opacity *= (1 - t); // fade out toward end
+        opacity *= (1 - t); // fade out
       }
 
-      // Pulsing glow via scale + subtle opacity modulation
+      // Pulsing glow
       const pulse = 0.9 + 0.25 * Math.sin(o.pulseOffset + now * 0.0015);
-      const scale = pulse;
 
-      o.el.style.transform = `translate(${o.x}px, ${o.y}px) scale(${scale})`;
+      // Apply transform
+      o.el.style.transform = `translate(${o.x}px, ${o.y}px) scale(${pulse})`;
       o.el.style.opacity = opacity.toFixed(3);
     }
 
-    // Maintain an even-ish distribution over time
+    // Maintain population
     while (orbs.length < MAX_ORBS) {
       createOrb();
     }
   }
 
-  function animate(timestamp) {
-    if (lastTime === null) {
-      lastTime = timestamp;
-    }
-    const dt = timestamp - lastTime;
-    lastTime = timestamp;
+  function animate(ts) {
+    if (lastTime === null) lastTime = ts;
+    const dt = ts - lastTime;
+    lastTime = ts;
 
-    updateOrbs(dt, timestamp);
+    updateOrbs(dt, ts);
     requestAnimationFrame(animate);
   }
 
-  // Initial population
+  // Initial spawn
   for (let i = 0; i < MAX_ORBS; i++) {
     createOrb();
   }
 
   requestAnimationFrame(animate);
-
-  // Optional: adjust positions gently on resize without killing orbs
-  window.addEventListener("resize", () => {
-    // No heavy work needed; orbs naturally drift back into view or get culled if too far.
-  });
 </script>
+
 
 
 </body>
 
 </html>
+
 
 
 
