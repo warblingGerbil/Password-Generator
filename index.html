@@ -95,10 +95,9 @@ body * { position: relative; z-index: 1; }
     // Add new versions here. Keep old versions unchanged so old passwords remain reproducible.
     // Each version entry should include:
     //  - kdf: "PBKDF2" (or "Argon2id" if you later add WASM Argon2)
-    //  - masterSalt: public salt string (can be changed per version)
+//  - masterSalt: public salt string (can be changed per version)
     //  - masterIter: iterations for hardening user Key -> master key
-    //  - accountIter: iterations for per-account derivation
-    //  - hash: hash algorithm for PBKDF2
+    //  - accountIter: iterations for per-account derivation    //  - hash: hash algorithm for PBKDF2
     //  - charset: allowed characters for final password
     //  - length: desired password length
     //
@@ -148,7 +147,6 @@ body * { position: relative; z-index: 1; }
       versionSelect.value = DEFAULT_VERSION in VERSIONS ? DEFAULT_VERSION : Object.keys(VERSIONS)[0];
       versionsListEl.textContent = lines.join("\n");
     }
-
     refreshVersionUI();
 
     async function deriveBitsPBKDF2(passwordBytes, saltBytes, iterations, bitLength, hash) {
@@ -211,8 +209,7 @@ body * { position: relative; z-index: 1; }
       // 2) Derive per-account bits using the hardened master key and a salt that includes version
       const accountSaltBytes = encoder.encode(version + "|" + accountName);
       const accountBits = await deriveBitsPBKDF2(
-        masterKeyBytes,
-        accountSaltBytes,
+        masterKeyBytes,        accountSaltBytes,
         params.accountIter,
         256, // bits
         params.hash
@@ -274,169 +271,53 @@ body * { position: relative; z-index: 1; }
         console.warn("Unknown version:", v);
       }
     };
-</script>
 
+  </script>
+  <!-- NEW: floating orb background script -->
 <script>
-  const MAX_ORBS = 28;
-  const orbs = [];
-  let lastTime = null;
+  const MAX_ORBS = 30;
 
   function createOrb() {
-    const el = document.createElement("div");
-    el.className = "orb";
+    const orb = document.createElement("div");
+    orb.className = "orb";
 
-    // Size
-    const baseSize = 18 + Math.random() * 32; // 18–50px
-    el.style.width = baseSize + "px";
-    el.style.height = baseSize + "px";
+    const size = Math.random() * 30 + 10; // 20–80px
+    orb.style.width = size + "px";
+    orb.style.height = size + "px";
 
-    // Spawn from a random edge
-    const edge = Math.floor(Math.random() * 4);
-    let x, y;
+    const startX = Math.random() * window.innerWidth;
+    const startY = Math.random() * window.innerHeight;
+    orb.style.left = startX + "px";
+    orb.style.top = startY + "px";
 
-    if (edge === 0) {          // top
-      x = Math.random() * window.innerWidth;
-      y = -40;
-    } else if (edge === 1) {   // bottom
-      x = Math.random() * window.innerWidth;
-      y = window.innerHeight + 40;
-    } else if (edge === 2) {   // left
-      x = -40;
-      y = Math.random() * window.innerHeight;
-    } else {                   // right
-      x = window.innerWidth + 40;
-      y = Math.random() * window.innerHeight;
-    }
+    const duration = Math.random() * 10 + 8; // 8–18s
+    orb.style.animationDuration = duration + "s";
+    
+    orb.style.animationDelay = (Math.random() * 5) + "s";
+    
+    document.body.appendChild(orb);
 
-    // Movement
-    const targetSpeed = 0.02 + Math.random() * 0.05; // final drift speed
-    const initialSpeed = targetSpeed * 0.3;          // start slow
-
-    const angle = Math.random() * Math.PI * 2;
-    let vx = Math.cos(angle) * initialSpeed;
-    let vy = Math.sin(angle) * initialSpeed;
-
-    // Lifespan
-    const maxLife = 10000 + Math.random() * 50000; // 10–60s
-    const fadeOutStart = 0.5 + Math.random() * 0.3; // fade at 50–80%
-
-    // Random direction change timer
-    let directionTimer = 1000 + Math.random() * 3000;
-
-    const pulseOffset = Math.random() * Math.PI * 2;
-
-    const orb = {
-      el,
-      x,
-      y,
-      vx,
-      vy,
-      baseSize,
-      life: 0,
-      maxLife,
-      fadeOutStart,
-      directionTimer,
-      targetSpeed,
-      pulseOffset
-    };
-
-    document.body.appendChild(el);
-    orbs.push(orb);
+    setTimeout(() => {
+      orb.remove();
+    }, duration * 1000);
   }
 
-  function updateOrbs(dt, now) {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-
-    for (let i = orbs.length - 1; i >= 0; i--) {
-      const o = orbs[i];
-
-      o.life += dt;
-      o.directionTimer -= dt;
-
-      // Occasional major direction changes
-      if (o.directionTimer <= 0) {
-        const angle = Math.random() * Math.PI * 2;
-        const newVx = Math.cos(angle) * o.targetSpeed;
-        const newVy = Math.sin(angle) * o.targetSpeed;
-
-        // Blend for smooth curves
-        const blend = 0.6;
-        o.vx = o.vx * (1 - blend) + newVx * blend;
-        o.vy = o.vy * (1 - blend) + newVy * blend;
-
-        o.directionTimer = 1000 + Math.random() * 4000;
-      }
-
-      // Continuous micro‑drift noise
-      o.vx += (Math.random() - 0.5) * 0.0005 * dt;
-      o.vy += (Math.random() - 0.5) * 0.0005 * dt;
-
-      // Smooth acceleration toward target speed
-      const speed = Math.sqrt(o.vx * o.vx + o.vy * o.vy);
-      if (speed > 0) {
-        const accel = 0.00005 * dt;
-        const desired = o.targetSpeed;
-        o.vx += ((o.vx / speed) * desired - o.vx) * accel;
-        o.vy += ((o.vy / speed) * desired - o.vy) * accel;
-      }
-
-      // Update position
-      o.x += o.vx * dt;
-      o.y += o.vy * dt;
-
-      // Remove if too far off-screen or expired
-      const margin = 200;
-      const offscreen =
-        o.x < -margin ||
-        o.x > w + margin ||
-        o.y < -margin ||
-        o.y > h + margin;
-
-      if (offscreen || o.life > o.maxLife) {
-        o.el.remove();
-        orbs.splice(i, 1);
-        continue;
-      }
-
-      // Fade in / fade out
-      const lifeRatio = o.life / o.maxLife;
-      let opacity = Math.min(1, lifeRatio * 2); // fade in
-
-      if (lifeRatio > o.fadeOutStart) {
-        const t = (lifeRatio - o.fadeOutStart) / (1 - o.fadeOutStart);
-        opacity *= (1 - t); // fade out
-      }
-
-      // Pulsing glow
-      const pulse = 0.9 + 0.25 * Math.sin(o.pulseOffset + now * 0.0015);
-
-      // Apply transform
-      o.el.style.transform = `translate(${o.x}px, ${o.y}px) scale(${pulse})`;
-      o.el.style.opacity = opacity.toFixed(3);
-    }
-
-    // Maintain population
-    while (orbs.length < MAX_ORBS) {
+  function maintainOrbs() {
+    const currentOrbs = document.querySelectorAll(".orb").length;
+    if (currentOrbs < MAX_ORBS) {
       createOrb();
     }
   }
 
-  function animate(ts) {
-    if (lastTime === null) lastTime = ts;
-    const dt = ts - lastTime;
-    lastTime = ts;
-
-    updateOrbs(dt, ts);
-    requestAnimationFrame(animate);
-  }
-
-  // Initial spawn
+  // Create initial orbs
   for (let i = 0; i < MAX_ORBS; i++) {
     createOrb();
   }
 
-  requestAnimationFrame(animate);
+  // Keep topping up
+  setInterval(maintainOrbs, 1500);
 </script>
+
 </body>
+
 </html>
