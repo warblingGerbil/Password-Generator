@@ -22,20 +22,18 @@
     opacity: 0;
     transform: translate(0, 0);
   }
-  15% {
+  10% {
     opacity: 1;
   }
-  80% {
+  85% {
     opacity: 1;
     transform: translate(var(--dx), var(--dy));
   }
   100% {
     opacity: 0;
-    transform: translate(calc(var(--dx) * 1.3), calc(var(--dy) * 1.3));
+    transform: translate(calc(var(--dx) * 1.1), calc(var(--dy) * 1.1));
   }
 }
-
-
 body * { position: relative; z-index: 1; }
   input[type="text"] {
     color: rgb(12, 141, 173);
@@ -259,19 +257,24 @@ function randomEdgePosition() {
   let x, y;
 
   switch (edge) {
-    case 0: x = Math.random() * window.innerWidth; y = -40; break;       // top
-    case 1: x = window.innerWidth + 40; y = Math.random() * window.innerHeight; break; // right
-    case 2: x = Math.random() * window.innerWidth; y = window.innerHeight + 40; break; // bottom
-    case 3: x = -40; y = Math.random() * window.innerHeight; break;      // left
+    case 0: x = Math.random() * window.innerWidth; y = -60; break; // top
+    case 1: x = window.innerWidth + 60; y = Math.random() * window.innerHeight; break; // right
+    case 2: x = Math.random() * window.innerWidth; y = window.innerHeight + 60; break; // bottom
+    case 3: x = -60; y = Math.random() * window.innerHeight; break; // left
   }
 
   return { x, y };
 }
 
-function longDriftVector() {
-  // Much longer drift to reach the center
-  const dx = (Math.random() * 1200 - 600).toFixed(1); // -600 to +600
-  const dy = (Math.random() * 1200 - 600).toFixed(1);
+function longCenterDrift(x, y) {
+  // Target: center of screen
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight / 2;
+
+  // Drift vector toward center, with slight randomness
+  const dx = (cx - x) * (1 + Math.random() * 0.2 - 0.1);
+  const dy = (cy - y) * (1 + Math.random() * 0.2 - 0.1);
+
   return { dx, dy };
 }
 
@@ -287,25 +290,18 @@ function createOrb() {
   orb.style.left = x + "px";
   orb.style.top = y + "px";
 
-  // Long lifespan: 20–35 seconds
-  const duration = Math.random() * 15 + 20;
+  // Lifespan: 120–180 seconds (2–3 minutes)
+  const duration = Math.random() * 60 + 120;
   orb.style.animationDuration = duration + "s";
 
-  // Long drift vector
-  const { dx, dy } = longDriftVector();
+  // Drift toward center
+  const { dx, dy } = longCenterDrift(x, y);
   orb.style.setProperty("--dx", dx + "px");
   orb.style.setProperty("--dy", dy + "px");
 
-  // Optional: mid-flight direction change (still subtle)
-  setTimeout(() => {
-    const { dx: newDx, dy: newDy } = longDriftVector();
-    orb.style.setProperty("--dx", newDx + "px");
-    orb.style.setProperty("--dy", newDy + "px");
-  }, duration * 0.55 * 1000);
-
   document.body.appendChild(orb);
 
-  // Remove after animation completes (fade-out already handled in CSS)
+  // Remove after animation completes
   setTimeout(() => orb.remove(), duration * 1000);
 }
 
@@ -318,9 +314,10 @@ function maintainOrbs() {
 for (let i = 0; i < MAX_ORBS; i++) createOrb();
 
 // Maintain population
-setInterval(maintainOrbs, 2000);
+setInterval(maintainOrbs, 5000);
 </script>
 </body>
 </html>
+
 
 
