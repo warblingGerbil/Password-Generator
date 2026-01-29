@@ -300,7 +300,7 @@ body * { position: relative; z-index: 1; }
     const orb = document.createElement("div");
     orb.className = "orb";
 
-    const size = Math.random() * 60 + 20; // 20–80px
+    const size = Math.random() * 40 + 15; // 20–80px
     orb.style.width = size + "px";
     orb.style.height = size + "px";
 
@@ -311,7 +311,9 @@ body * { position: relative; z-index: 1; }
 
     const duration = Math.random() * 10 + 8; // 8–18s
     orb.style.animationDuration = duration + "s";
-
+    
+    orb.style.animationDelay = (Math.random() * 5) + "s";
+    
     document.body.appendChild(orb);
 
     setTimeout(() => {
@@ -338,6 +340,7 @@ body * { position: relative; z-index: 1; }
 </body>
 
 </html>
+
 
 
 
