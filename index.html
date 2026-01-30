@@ -92,7 +92,8 @@
 
 <body>
 
-  <audio id="bgHum" src="electricHum.mp3" loop></audio>
+  <!-- Background hum audio -->
+  <audio id="bgHum" src="Images/electricHum.mp3" loop></audio>
 
   <script>
     const hum = document.getElementById("bgHum");
@@ -101,8 +102,9 @@
     hum.onerror = () => console.log("AUDIO FAILED TO LOAD");
     hum.oncanplaythrough = () => console.log("AUDIO LOADED OK");
 
+    // Required by browser autoplay rules
     function startHum() {
-      hum.play();
+      hum.play().catch(err => console.log("Play blocked:", err));
       document.removeEventListener("click", startHum);
     }
 
@@ -346,4 +348,3 @@
 
 </body>
 </html>
-
