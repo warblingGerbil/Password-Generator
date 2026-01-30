@@ -92,24 +92,31 @@
 
 <body>
 
-  <!-- Background hum audio -->
   <audio id="bgHum" src="electricHum.mp3" loop></audio>
 
   <script>
-    const hum = document.getElementById("bgHum");
-    hum.volume = 0.12;
+  const humElement = document.getElementById("bgHum");
 
-    hum.onerror = () => console.log("AUDIO FAILED TO LOAD");
-    hum.oncanplaythrough = () => console.log("AUDIO LOADED OK");
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const track = audioCtx.createMediaElementSource(humElement);
 
-    // Required by browser autoplay rules
-    function startHum() {
-      hum.play().catch(err => console.log("Play blocked:", err));
-      document.removeEventListener("click", startHum);
-    }
+  const gainNode = audioCtx.createGain();
+  gainNode.gain.value = 3.0;
 
-    document.addEventListener("click", startHum);
-  </script>
+  track.connect(gainNode).connect(audioCtx.destination);
+
+  humElement.onerror = () => console.log("AUDIO FAILED TO LOAD");
+  humElement.oncanplaythrough = () => console.log("AUDIO LOADED OK");
+
+  function startHum() {
+    audioCtx.resume();
+    humElement.play().catch(err => console.log("Play blocked:", err));
+    document.removeEventListener("click", startHum);
+  }
+
+  document.addEventListener("click", startHum);
+</script>
+
 
   <h1>Secure Password Generator🔐</h1>
   <h2>Generate secure passwords for your accounts!</h2>
@@ -348,4 +355,5 @@
 
 </body>
 </html>
+
 
